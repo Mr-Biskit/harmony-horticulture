@@ -17,20 +17,15 @@ contract Pots is Base, ERC721, Ownable {
     uint256 private constant MAX_SUPPLY = 5000;
     uint256 private constant MAX_PER_MINT = 2;
     Counters.Counter private tokenIds;
-    uint64[] private i_defaultLevelIds;
-    uint64[] private i_defaultLevelRefIds;
-    string[] private i_defaultMetadataURI;
     Intake[] defaultLevels;
 
-    constructor(
-        uint64[] memory _levelIds,
-        uint64[] memory _levelrefIds,
-        string[] memory _metadataURI
-    ) ERC721("Pots", "POT") {
-        i_defaultLevelIds = _levelIds;
-        i_defaultLevelIds = _levelrefIds;
-        i_defaultMetadataURI = _metadataURI;
-    }
+    bool public isActive = false;
+
+    constructor() ERC721("Pots", "POT") {}
+
+    /**
+     * Minting functionality
+     */
 
     modifier mintCompliance(uint256 _mintAmount) {
         require(
@@ -51,27 +46,55 @@ contract Pots is Base, ERC721, Ownable {
         _mintLoop(msg.sender, mintAmount);
     }
 
-    function createDefaultLevels(
-        uint64[] memory _levelIds,
-        uint64[] memory _levelrefIds,
-        string[] memory _metadataURI
-    ) internal onlyOwner {
-        defaultLevels = _createDefaultLevels(
-            _levelIds,
-            _levelrefIds,
-            _metadataURI
-        );
-    }
-
     function _mintLoop(address _reciever, uint256 _mintAmount) internal {
+        require(isActive, "Sale not open");
         for (uint256 i = 0; i < _mintAmount; ) {
             tokenIds.increment();
             uint256 tokenId = tokenIds.current();
             _safeMint(_reciever, tokenId);
-            _setDefaultLevels(defaultLevels, tokenId);
+            _setDefaultLevels(tokenId);
             unchecked {
                 i++;
             }
         }
+    }
+
+    /**
+     * Accessors
+     */
+
+    function setActive(bool _isActive) public onlyOwner {
+        isActive = _isActive;
+    }
+
+    /**
+     * Level Functionalty
+     */
+
+    function addLevel(Intake calldata intakeStruct) external onlyOwner {
+        _addLevel(intakeStruct);
+    }
+
+    function addLevelList(Intake[] calldata intakeStructs) external onlyOwner {
+        _addLevelList(intakeStructs);
+    }
+
+    function getLevelMetadata(uint64 levelId)
+        public
+        view
+        onlyOwner
+        returns (string memory)
+    {
+        string memory metadata = _metadata[levelId];
+        return metadata;
+    }
+
+    function getActiveLevels(uint256 tokenId)
+        public
+        view
+        onlyOwner
+        returns (uint64[] memory)
+    {
+        return _activeLevels[tokenId];
     }
 }
